@@ -1,0 +1,50 @@
+{% extends "transcriber/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2>Transcription History</h2>
+
+<form method="get" class="toolbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search title or text...">
+  <button type="submit" class="btn">Search</button>
+  <a href="{% url 'transcriber:create' %}" class="btn btn-secondary">+ New</a>
+</form>
+
+<div class="card">
+  {% if transcriptions %}
+  <table>
+    <thead>
+      <tr><th>Title</th><th>Text</th><th>Lang</th><th>Created</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for t in transcriptions %}
+      <tr>
+        <td>{{ t.title|default:"(untitled)" }}</td>
+        <td>{{ t.text|truncatechars:80 }}</td>
+        <td>{{ t.language|default:"-" }}</td>
+        <td class="muted">{{ t.created_at|date:"d M Y, H:i" }}</td>
+        <td>
+          <a href="{% url 'transcriber:detail' t.pk %}" class="btn btn-small">View</a>
+          <a href="{% url 'transcriber:update' t.pk %}" class="btn btn-small btn-secondary">Edit</a>
+          <a href="{% url 'transcriber:delete' t.pk %}" class="btn btn-small btn-danger">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}">&laquo; Prev</a>
+    {% endif %}
+    <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}&q={{ q }}">Next &raquo;</a>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="muted">No transcriptions yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "transcriber/base.html" %}
+
+{% block content %}
+<div class="card">
+  <h2>{{ object.title|default:"(untitled)" }}</h2>
+  <p class="muted">
+    Language: {{ object.language|default:"-" }} |
+    Created: {{ object.created_at|date:"d M Y, H:i" }} |
+    Updated: {{ object.updated_at|date:"d M Y, H:i" }}
+  </p>
+  <p style="white-space: pre-wrap;">{{ object.text }}</p>
+  <a href="{% url 'transcriber:update' object.pk %}" class="btn btn-secondary">Edit</a>
+  <a href="{% url 'transcriber:delete' object.pk %}" class="btn btn-danger">Delete</a>
+  <a href="{% url 'transcriber:list' %}" class="btn">Back</a>
+</div>
+{% endblock %}
