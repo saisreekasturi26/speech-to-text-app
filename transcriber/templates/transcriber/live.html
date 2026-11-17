@@ -1,0 +1,344 @@
+{% extends "transcriber/base.html" %}
+
+{% block title %}Live Transcribe{% endblock %}
+
+{% block content %}
+<div class="lt-wrap">
+  <h2 class="lt-title">Live Transcription</h2>
+  <p class="lt-sub">Choose a language, press the microphone button and speak. When you press Stop, the transcript is saved to your history automatically.</p>
+
+  <div class="lt-panel">
+    <div class="lt-center">
+      <div class="lt-seg" role="radiogroup" aria-label="Language">
+        <input type="radio" name="lang" id="lt-mix" value="mix" checked>
+        <label for="lt-mix">Hindi + English Mix</label>
+        <input type="radio" name="lang" id="lt-hi" value="hi">
+        <label for="lt-hi">Hindi</label>
+        <input type="radio" name="lang" id="lt-en" value="en">
+        <label for="lt-en">English</label>
+      </div>
+    </div>
+
+    <div class="lt-mic-area">
+      <button id="ltMic" class="lt-mic" type="button" aria-label="Start or stop recording">
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor" aria-hidden="true">
+          <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
+        </svg>
+      </button>
+      <div id="ltMicLabel" class="lt-mic-label">Start</div>
+      <div id="ltTimer" class="lt-timer">00:00</div>
+    </div>
+
+    <p id="ltStatus" class="lt-status">Press Start and allow microphone access.</p>
+    <div id="ltSaved" class="lt-saved" hidden></div>
+
+    <div class="lt-out-head">
+      <strong>Transcript</strong>
+      <span class="lt-actions">
+        <button id="ltCopy" class="lt-btn" type="button">Copy</button>
+        <button id="ltClear" class="lt-btn" type="button">Clear</button>
+      </span>
+    </div>
+    <div id="ltOutput" class="lt-output"></div>
+  </div>
+</div>
+
+<style>
+  .lt-wrap { display: block; }
+  .lt-title { margin-bottom: 4px; }
+  .lt-sub { margin-top: 0; color: #666; font-size: 14px; }
+
+  .lt-panel { display: block; background: #fff; border-radius: 12px; padding: 28px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+  .lt-center { display: flex; justify-content: center; }
+
+  .lt-seg { display: inline-flex; flex-wrap: nowrap; border: 1px solid #c8d0da; border-radius: 999px; overflow: hidden; max-width: 100%; }
+  .lt-seg input { display: none; }
+  .lt-seg label { flex: none; white-space: nowrap; padding: 9px 20px; cursor: pointer; font-size: 14px; background: #fff; color: #222; user-select: none; }
+  .lt-seg input:checked + label { background: #1f3a5f; color: #fff; }
+  .lt-seg input:disabled + label { cursor: not-allowed; opacity: 0.65; }
+
+  .lt-mic-area { display: flex; flex-direction: column; align-items: center; margin: 26px 0 8px; }
+  .lt-mic { width: 84px; height: 84px; border-radius: 50%; border: none; cursor: pointer; background: #1f3a5f; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(31,58,95,0.35); transition: background 0.2s, transform 0.1s; }
+  .lt-mic:hover:not(:disabled) { transform: scale(1.04); }
+  .lt-mic:disabled { opacity: 0.6; cursor: wait; }
+  .lt-mic.recording { background: #c0392b; animation: ltPulse 1.4s infinite; }
+  @keyframes ltPulse {
+    0% { box-shadow: 0 0 0 0 rgba(192,57,43,0.55); }
+    70% { box-shadow: 0 0 0 20px rgba(192,57,43,0); }
+    100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); }
+  }
+  .lt-mic-label { margin-top: 10px; font-weight: bold; }
+  .lt-timer { font-size: 13px; color: #777; font-variant-numeric: tabular-nums; }
+
+  .lt-status { text-align: center; color: #555; font-size: 14px; min-height: 20px; margin: 10px 0; }
+  .lt-saved { background: #e8f5e9; color: #1b5e20; border-radius: 6px; padding: 10px 14px; text-align: center; margin-bottom: 14px; }
+  .lt-saved[hidden] { display: none; }
+  .lt-saved a { color: #1b5e20; font-weight: bold; margin-left: 8px; }
+
+  .lt-out-head { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 8px; }
+  .lt-actions { display: inline-flex; gap: 8px; }
+  .lt-btn { padding: 5px 12px; border: none; border-radius: 6px; background: #6c757d; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .lt-btn:hover { background: #565e64; }
+
+  .lt-output { display: block; min-height: 200px; max-height: 420px; overflow-y: auto; border: 1px solid #e5e5e5; border-radius: 8px; padding: 12px 14px; background: #fafafa; font-size: 18px; line-height: 1.6; }
+  .lt-output:empty::before { content: "Your transcript will appear here..."; color: #aaa; font-size: 15px; }
+  .lt-line { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px dashed #e3e3e3; }
+  .lt-line:last-child { border-bottom: none; }
+  .lt-num { flex: none; min-width: 24px; font-size: 12px; color: #8a96a6; }
+  .lt-txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+  @media (max-width: 520px) {
+    .lt-seg label { padding: 8px 12px; font-size: 13px; }
+  }
+</style>
+
+<script>
+(function () {
+  const TARGET_RATE = 16000;
+  const CHUNK = 4096; // 4096 samples is about 256 ms of audio
+
+  const micBtn = document.getElementById("ltMic");
+  const micLabel = document.getElementById("ltMicLabel");
+  const timerEl = document.getElementById("ltTimer");
+  const statusEl = document.getElementById("ltStatus");
+  const savedBar = document.getElementById("ltSaved");
+  const outputEl = document.getElementById("ltOutput");
+  const copyBtn = document.getElementById("ltCopy");
+  const clearBtn = document.getElementById("ltClear");
+  const langRadios = document.querySelectorAll('input[name="lang"]');
+
+  let ws = null, stream = null, audioCtx = null, workletNode = null, sourceNode = null;
+  let resampleBuf = new Float32Array(0);
+  let resamplePos = 0;
+  let pending = [];
+  let streaming = false;
+  let state = "idle"; // idle | connecting | recording | finishing
+  let timerId = null, startedAt = 0;
+  const lines = [];
+
+  // Small AudioWorklet that forwards raw microphone frames to the main thread.
+  const workletCode = `
+    class PCMProcessor extends AudioWorkletProcessor {
+      process(inputs) {
+        const input = inputs[0];
+        if (input && input[0]) {
+          this.port.postMessage(new Float32Array(input[0]));
+        }
+        return true;
+      }
+    }
+    registerProcessor("pcm-processor", PCMProcessor);
+  `;
+
+  function setStatus(text) { statusEl.textContent = text; }
+
+  function selectedLang() {
+    return document.querySelector('input[name="lang"]:checked').value;
+  }
+
+  function setState(s) {
+    state = s;
+    micBtn.classList.toggle("recording", s === "recording");
+    micBtn.disabled = (s === "connecting" || s === "finishing");
+    langRadios.forEach(function (r) { r.disabled = (s !== "idle"); });
+    micLabel.textContent = { idle: "Start", connecting: "Connecting...", recording: "Stop", finishing: "Finishing..." }[s];
+  }
+
+  function startTimer() {
+    startedAt = Date.now();
+    timerEl.textContent = "00:00";
+    timerId = setInterval(function () {
+      const sec = Math.floor((Date.now() - startedAt) / 1000);
+      const mm = String(Math.floor(sec / 60)).padStart(2, "0");
+      const ss = String(sec % 60).padStart(2, "0");
+      timerEl.textContent = mm + ":" + ss;
+    }, 500);
+  }
+
+  function stopTimer() {
+    if (timerId) { clearInterval(timerId); timerId = null; }
+  }
+
+  function addLine(text) {
+    lines.push(text);
+    const row = document.createElement("div");
+    row.className = "lt-line";
+    const num = document.createElement("span");
+    num.className = "lt-num";
+    num.textContent = "#" + lines.length;
+    const txt = document.createElement("span");
+    txt.className = "lt-txt";
+    txt.textContent = text;
+    row.appendChild(num);
+    row.appendChild(txt);
+    outputEl.appendChild(row);
+    outputEl.scrollTop = outputEl.scrollHeight;
+  }
+
+  function showSaved(url) {
+    savedBar.textContent = "Saved to history.";
+    const a = document.createElement("a");
+    a.href = url;
+    a.textContent = "View transcript";
+    savedBar.appendChild(a);
+    savedBar.hidden = false;
+  }
+
+  // Convert from the browser sample rate (48000/44100 Hz) to 16000 Hz by averaging.
+  function resample(frame) {
+    const merged = new Float32Array(resampleBuf.length + frame.length);
+    merged.set(resampleBuf);
+    merged.set(frame, resampleBuf.length);
+
+    const ratio = audioCtx.sampleRate / TARGET_RATE;
+    const out = [];
+    let pos = resamplePos;
+    while (pos + ratio <= merged.length) {
+      const start = Math.floor(pos);
+      const end = Math.floor(pos + ratio);
+      let sum = 0;
+      for (let j = start; j < end; j++) sum += merged[j];
+      out.push(sum / (end - start));
+      pos += ratio;
+    }
+    const consumed = Math.floor(pos);
+    resampleBuf = merged.slice(consumed);
+    resamplePos = pos - consumed;
+    return out;
+  }
+
+  function onFrame(frame) {
+    if (!streaming) return;
+    const samples = resample(frame);
+    for (let i = 0; i < samples.length; i++) pending.push(samples[i]);
+
+    while (pending.length >= CHUNK) {
+      const part = pending.splice(0, CHUNK);
+      const int16 = new Int16Array(CHUNK);
+      for (let i = 0; i < CHUNK; i++) {
+        const v = Math.max(-1, Math.min(1, part[i]));
+        int16[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(int16.buffer);
+    }
+  }
+
+  function onServerMessage(event) {
+    const msg = JSON.parse(event.data);
+    if (msg.type === "status") setStatus(msg.message);
+    else if (msg.type === "ready") setStatus("Listening... speak now. Text appears after each pause.");
+    else if (msg.type === "final") addLine(msg.text);
+    else if (msg.type === "error") setStatus("Error: " + msg.message);
+    else if (msg.type === "done") {
+      if (msg.error) setStatus(msg.error);
+      else if (msg.saved) { setStatus("Done."); showSaved(msg.url); }
+      else setStatus("Done. No speech was detected, so nothing was saved.");
+      if (ws) ws.close();
+    }
+  }
+
+  function stopCapture() {
+    streaming = false;
+    stopTimer();
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    if (workletNode) { workletNode.disconnect(); workletNode = null; }
+    if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
+    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  }
+
+  async function start() {
+    if (state !== "idle") return;
+    setState("connecting");
+    savedBar.hidden = true;
+    outputEl.innerHTML = "";
+    lines.length = 0;
+    setStatus("Requesting microphone access...");
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      audioCtx = new AudioContext();
+      await audioCtx.resume();
+
+      const url = URL.createObjectURL(new Blob([workletCode], { type: "application/javascript" }));
+      await audioCtx.audioWorklet.addModule(url);
+      URL.revokeObjectURL(url);
+
+      sourceNode = audioCtx.createMediaStreamSource(stream);
+      workletNode = new AudioWorkletNode(audioCtx, "pcm-processor");
+      workletNode.port.onmessage = function (e) { onFrame(e.data); };
+
+      // The worklet must be connected to the destination to keep running; a muted gain node avoids playback.
+      const mute = audioCtx.createGain();
+      mute.gain.value = 0;
+      sourceNode.connect(workletNode);
+      workletNode.connect(mute);
+      mute.connect(audioCtx.destination);
+    } catch (err) {
+      setStatus("Microphone setup failed: " + err.message);
+      stopCapture();
+      setState("idle");
+      return;
+    }
+
+    resampleBuf = new Float32Array(0);
+    resamplePos = 0;
+    pending = [];
+
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(proto + "://" + location.host + "/ws/transcribe/?lang=" + selectedLang());
+    ws.onopen = function () {
+      streaming = true;
+      setState("recording");
+      startTimer();
+      setStatus("Connected. Loading the speech model (the first time takes a few seconds)...");
+    };
+    ws.onmessage = onServerMessage;
+    ws.onerror = function () { setStatus("WebSocket error. Check the server terminal for details."); };
+    ws.onclose = function () {
+      if (state === "recording" || state === "connecting") {
+        setStatus("Connection closed. Check the server terminal for details.");
+      }
+      stopCapture();
+      setState("idle");
+      ws = null;
+    };
+  }
+
+  function stop() {
+    if (state !== "recording") return;
+    setState("finishing");
+    stopCapture();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "stop" }));
+      setStatus("Processing the last words and saving...");
+    }
+  }
+
+  micBtn.addEventListener("click", function () {
+    if (state === "idle") start();
+    else if (state === "recording") stop();
+  });
+
+  copyBtn.addEventListener("click", async function () {
+    if (!lines.length) return;
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setStatus("Copied to clipboard.");
+    } catch (e) {
+      setStatus("Could not copy. Select the text and press Ctrl+C.");
+    }
+  });
+
+  clearBtn.addEventListener("click", function () {
+    if (state !== "idle") return;
+    outputEl.innerHTML = "";
+    lines.length = 0;
+    savedBar.hidden = true;
+  });
+
+  setState("idle");
+})();
+</script>
+{% endblock %}

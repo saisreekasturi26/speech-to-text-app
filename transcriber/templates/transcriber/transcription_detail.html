@@ -4,7 +4,7 @@
 <div class="card">
   <h2>{{ object.title|default:"(untitled)" }}</h2>
   <p class="muted">
-    Language: {{ object.language|default:"-" }} |
+    Language: {% if object.language == "mix" %}Hindi + English{% elif object.language == "hi" %}Hindi{% elif object.language == "en" %}English{% else %}{{ object.language|default:"-" }}{% endif %} |
     Created: {{ object.created_at|date:"d M Y, H:i" }} |
     Updated: {{ object.updated_at|date:"d M Y, H:i" }}
   </p>

@@ -6,6 +6,7 @@ app_name = "transcriber"
 
 urlpatterns = [
     path("", views.TranscriptionListView.as_view(), name="list"),
+    path("live/", views.LiveTranscribeView.as_view(), name="live"),
     path("new/", views.TranscriptionCreateView.as_view(), name="create"),
     path("<int:pk>/", views.TranscriptionDetailView.as_view(), name="detail"),
     path("<int:pk>/edit/", views.TranscriptionUpdateView.as_view(), name="update"),

@@ -26,7 +26,10 @@
   </style>
 </head>
 <body>
-  <header><a href="{% url 'transcriber:list' %}">Speech to Text</a></header>
+    <header>
+    <a href="{% url 'transcriber:list' %}">Speech to Text</a>
+    <a href="{% url 'transcriber:live' %}" style="margin-left:24px; font-size:15px; font-weight:normal;">Live Transcribe</a>
+  </header>
   <main>
     {% block content %}{% endblock %}
   </main>

@@ -8,6 +8,7 @@
 <form method="get" class="toolbar">
   <input type="search" name="q" value="{{ q }}" placeholder="Search title or text...">
   <button type="submit" class="btn">Search</button>
+  <a href="{% url 'transcriber:live' %}" class="btn">Live</a>
   <a href="{% url 'transcriber:create' %}" class="btn btn-secondary">+ New</a>
 </form>
 
@@ -22,7 +23,7 @@
       <tr>
         <td>{{ t.title|default:"(untitled)" }}</td>
         <td>{{ t.text|truncatechars:80 }}</td>
-        <td>{{ t.language|default:"-" }}</td>
+        <td>{% if t.language == "mix" %}Hindi + English{% elif t.language == "hi" %}Hindi{% elif t.language == "en" %}English{% else %}{{ t.language|default:"-" }}{% endif %}</td>
         <td class="muted">{{ t.created_at|date:"d M Y, H:i" }}</td>
         <td>
           <a href="{% url 'transcriber:detail' t.pk %}" class="btn btn-small">View</a>
@@ -36,15 +37,15 @@
 
   <div class="pagination">
     {% if page_obj.has_previous %}
-      <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}">&laquo; Prev</a>
+      <a href="?page={{ page_obj.previous_page_number }}&q={{ q|urlencode }}">&laquo; Prev</a>
     {% endif %}
     <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
     {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}&q={{ q }}">Next &raquo;</a>
+      <a href="?page={{ page_obj.next_page_number }}&q={{ q|urlencode }}">Next &raquo;</a>
     {% endif %}
   </div>
   {% else %}
-  <p class="muted">No transcriptions yet.</p>
+  <p class="muted">{% if q %}No results for "{{ q }}".{% else %}No transcriptions yet.{% endif %}</p>
   {% endif %}
 </div>
 {% endblock %}
